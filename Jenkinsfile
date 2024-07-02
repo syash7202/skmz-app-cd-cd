@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Git Checkout') {
             steps {
-               git 'https://github.com/syash7202/skmz-app-cd-cd.git'
+               git 'https://github.com/syash7202/skmz-app-ci-cd.git'
             }
         }
         
