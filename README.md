@@ -116,9 +116,11 @@ side. **MongoDB** is used as a database.
 
   ![jenkins](./readme-assests/plugings-used.png)
 
-  - Dashboard> Manage Jenkins> Tools
+  - Go to Dashboard> Manage Jenkins> Tools & configure the installed plugins with requirement of application, such as :
 
-  configure the installed plugins with requirement of application.
+    - jdk17
+    - sonarqube
+    - docker latest
 
 - **Access sonaqube at port 9000 & setup**
 
@@ -127,7 +129,7 @@ side. **MongoDB** is used as a database.
   ![](./readme-assests/sonar-login.png)
 
   - generate token for jenkins connection at `Adminstrations> Securty`
-    | add oken for Administrator.
+    | add token for Administrator.
 
   ![](./readme-assests/token-generation-path.png)
 
@@ -145,17 +147,17 @@ side. **MongoDB** is used as a database.
 
   - Build the pipeline.
 
-- **App accessble at port 8500 (as configured)**
+## **App accessble at port 8500 (as configured)**
 
-  - `SKMS APP`
+- `SKMS APP`
 
-  ![](./readme-assests/app-search-1.png)
-  ![](./readme-assests/app-search-2.png)
-  ![](./readme-assests/app-search-3.png)
+![](./readme-assests/app-search-1.png)
+![](./readme-assests/app-search-2.png)
+![](./readme-assests/app-search-3.png)
 
-  - `SKMS Playground`
+- `SKMS Playground`
 
-  ![](./readme-assests/playground.png)
+![](./readme-assests/playground.png)
 
 - **Outputs from Successfull build**
 
