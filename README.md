@@ -1,109 +1,178 @@
-SKMZ  [![](https://img.shields.io/codecov/c/github/Shpota/skmz?color=green&logo=test%20coverage)](https://codecov.io/gh/Shpota/skmz)
-====
+# SKMZ - Jenkins CI-CD Pipeline
 
 A web application that allows to query programmers
 with their skills via a **GraphQL** API. The
-application is implemented with **Go** and 
+application is implemented with **Go** and
 **[gqlgen](https://github.com/99designs/gqlgen)**
 on the backend side and **React** on the front end
 side. **MongoDB** is used as a database.
 
 ![Showcase](showcase.gif)
 
+## Pipeline Architecture
 
-## System requirements
-You need to have [Docker](https://www.docker.com) and
-[Docker Compose](https://docs.docker.com/compose/)
-installed in oder to build and run the project. No
-additional tools required.
+![](./readme-assests/SKMS%20CICD.png)
 
-## How to build and run in production mode
-Perform 
-```sh
-docker-compose up
-```
-Access the application via http://localhost:8080.
-Access the GraphQL Playground using 
-http://localhost:8080/playground.
+### AWS Infrastructure setup
 
-## How to develop locally
+- Create an security group with following inbound rules:
 
-**Tools**
+  ![](./readme-assests/sg-rules.png)
 
-In order to develop the app locally the following
-tools are required: [Docker](https://docs.docker.com/),
-[Docker Compose](https://docs.docker.com/compose/) (if you
-are on Mac or Windows it comes installed with Docker), 
-[Node.js](https://nodejs.org/en/) and
-[Go](https://golang.org/dl/).
+- Create an EC2 instace with following configurations:
 
-Verify if your environment is ready by running the
-following 4 commands:
+  - image - Ubuntu 22.04LTS
+  - size - t2.large (recommended)
+  - storage - 25GB
+  - security group - defined above
 
-```sh
-docker --version
-docker-compose --version
-npm --version
-go version
-```
+- Set the server
 
-**Start the dev DB**
-```sh
-docker-compose -f docker-compose-dev.yml up
-```
-This will start a local MongoDB which will be
-accessible on port `27017`. The DB will
-be populated with test records from 
-[mongo.init](server/db/mongo.init).
+  - ssh to the instance
+  - create a installation script `<script-name>.sh>` with given details:
 
-**Start the server**
+    ```#!/bin/bash
+        echo
+        echo "------------------------------Updating System------------------------------"
+        echo
+        sudo apt update -y
 
-Navigate to the `/server` folder and execute:
+        # pre Jenkins installation
+        echo
+        echo "------------------------------Installing Jenkins------------------------------"
+        echo
+        sudo apt install maven -y
 
-```sh
-go run server.go
-```
-This will compile and run the back end part.
-As a result, the API and [the GraphQL
-playground](http://localhost:8080/playground)
-will be available.
+        # jenkins installations
+        sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+        https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+        https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+        /etc/apt/sources.list.d/jenkins.list > /dev/null
 
-**Start the Front End dev server**
+        sudo apt-get update -y
+        sudo apt-get install jenkins -y
+        sudo systemctl enable jenkins
+        sudo systemctl start jenkins
 
-Navigate to the `/webapp` folder and execute
-the following commands:
+        # docker installation
+        echo
+        echo "------------------------------Installing docker------------------------------"
+        echo
+        sudo apt-get install ca-certificates curl -y
+        sudo install -m 0755 -d /etc/apt/keyrings -y
+        sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-```sh
-npm install
-npm start
-```
-As a result, the web site will be accessible
-on http://localhost:3000.
+        # Add the repository to Apt sources:
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update -y
+        sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
-The changes on the front end side will be automatically
-applied once a file is saved. The changes in the back
-end code require restarting the back end.
+        sudo chmod 777 /var/run/docker.sock
 
-## Customizations
+        echo
+        echo "------------------------------running sonarqube docker container   ------------------------------"
+        echo
+        docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
 
-The database starts with a preloaded set of data which
-can be customized in 
-[the mongo.init file](server/db/mongo.init).
 
-Here is an example of a GraphQL query which can be
-run in [the Playground](http://localhost:8080/playground):
-```graphql
-query {
-  programmers(skill: "go") { 
-    name,
-    picture,
-    title,
-    company,
-    skills {
-      name,
-      icon,
-      importance
-    }
-  }
-}
-```
+
+
+
+
+        # trivy installation
+        echo
+        echo "------------------------------Installing Trivy ------------------------------"
+        echo
+        sudo apt-get install wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update -y
+        sudo apt-get install trivy -y
+
+
+        docker --version
+        dcpker compose version
+        trivy --version
+
+
+    ```
+
+  - run the command to execute the script : `chmod +x <script-name>.sh && ./<script-name>.sh`
+
+- **Access jenkins at port 8080 & setup**
+
+  - <"public-ip-add>:8080
+  - follow the instructions & setup jenkins
+
+    - ssh into the instace & cat the given jenkins directory for password.
+    - Dashboard> Manage Jenkins> Plugin > Available Plugins
+
+    install the below shown plugins
+
+  ![jenkins](./readme-assests/plugings-used.png)
+
+  - Dashboard> Manage Jenkins> Tools
+
+  configure the installed plugins with requirement of application.
+
+- **Access sonaqube at port 9000 & setup**
+
+  - user : admin pass: admin
+
+  ![](./readme-assests/sonar-login.png)
+
+  - generate token for jenkins connection at `Adminstrations> Securty`
+    | add oken for Administrator.
+
+  ![](./readme-assests/token-generation-path.png)
+
+  ![](./readme-assests/sonar%20token.png)
+
+- **Setup the credentions for sonarcube in Jenkins**
+
+  - in `manage Jenkins > credentionals` add serecet text (token generated) and giver name as sonar-cred.
+
+- **Create Pipeline for the SKMS Application**
+
+  - build a new item with pipeline configuration.
+  - select `delete previous builds` & set it to 3 (at max).
+  - Configure the pipeline with the script given in [Jenkins](https://github.com/syash7202/skmz-app-ci-cd/blob/master/Jenkinsfile)
+
+  - Build the pipeline.
+
+- **App accessble at port 8500 (as configured)**
+
+  - `SKMS APP`
+
+  ![](./readme-assests/app-search-1.png)
+  ![](./readme-assests/app-search-2.png)
+  ![](./readme-assests/app-search-3.png)
+
+  - `SKMS Playground`
+
+  ![](./readme-assests/playground.png)
+
+- **Outputs from Successfull build**
+
+  - `Pipeline stage view`
+
+  ![](./readme-assests/stage-view.png)
+
+  - `Pipeline console output for build success`
+
+  ![](./readme-assests/pipeline-success.png)
+
+  - `Pipeline console output for Sonarqube Scan`
+
+  ![](./readme-assests/sonarqube-ouput.png)
+
+  - `Output for Sonarqube Scan at sonarqube server`
+
+  ![](./readme-assests/sonarqube-overall.png)
+
+  ![](./readme-assests/sonarqube-project.png)
